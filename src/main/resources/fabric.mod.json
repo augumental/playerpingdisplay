@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "playerpingdisplay",
+	"version": "${version}",
+	"name": "Player Ping Display",
+	"description": "Shows a targeted player's live ping for five seconds after you hit them.",
+	"authors": [
+		"badeye"
+	],
+	"contact": {},
+	"license": "MIT",
+	"icon": "assets/playerpingdisplay/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.badeye.playerpingdisplay.PlayerPingDisplayClient"
+		],
+		"modmenu": [
+			"com.badeye.playerpingdisplay.PlayerPingDisplayModMenu"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": ">=17.0.0"
+	}
+}
