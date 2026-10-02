@@ -1,17 +1,17 @@
 package com.badeye.playerpingdisplay;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.SliderWidget;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 public final class PlayerPingDisplayConfigScreen extends Screen {
 	private final Screen parent;
 
 	public PlayerPingDisplayConfigScreen(Screen parent) {
-		super(Text.translatable("screen.playerpingdisplay.title"));
+		super(Component.translatable("screen.playerpingdisplay.title"));
 		this.parent = parent;
 	}
 
@@ -20,71 +20,71 @@ public final class PlayerPingDisplayConfigScreen extends Screen {
 		int centerX = width / 2;
 		int y = height / 2 - 88;
 
-		addDrawableChild(ButtonWidget.builder(anchorText(), button -> {
+		addRenderableWidget(Button.builder(anchorText(), button -> {
 			PlayerPingDisplayConfig.anchor = PlayerPingDisplayConfig.anchor.next();
 			button.setMessage(anchorText());
 			PlayerPingDisplayConfig.save();
-		}).dimensions(centerX - 100, y, 200, 20).build());
+		}).bounds(centerX - 100, y, 200, 20).build());
 
-		addDrawableChild(new OffsetSlider(centerX - 100, y + 26, true));
-		addDrawableChild(new OffsetSlider(centerX - 100, y + 52, false));
+		addRenderableWidget(new OffsetSlider(centerX - 100, y + 26, true));
+		addRenderableWidget(new OffsetSlider(centerX - 100, y + 52, false));
 
-		addDrawableChild(ButtonWidget.builder(pingModeText(), button -> {
+		addRenderableWidget(Button.builder(pingModeText(), button -> {
 			PlayerPingDisplayConfig.pingMode = PlayerPingDisplayConfig.pingMode.next();
 			button.setMessage(pingModeText());
 			PlayerPingDisplayConfig.save();
-		}).dimensions(centerX - 100, y + 78, 200, 20).build());
+		}).bounds(centerX - 100, y + 78, 200, 20).build());
 
-		addDrawableChild(ButtonWidget.builder(dynamicResolverText(), button -> {
+		addRenderableWidget(Button.builder(dynamicResolverText(), button -> {
 			PlayerPingDisplayConfig.dynamicResolverEnabled = !PlayerPingDisplayConfig.dynamicResolverEnabled;
 			button.setMessage(dynamicResolverText());
 			PlayerPingDisplayConfig.save();
-		}).dimensions(centerX - 100, y + 104, 200, 20).build());
+		}).bounds(centerX - 100, y + 104, 200, 20).build());
 
-		addDrawableChild(new RefreshSlider(centerX - 100, y + 130));
+		addRenderableWidget(new RefreshSlider(centerX - 100, y + 130));
 
-		addDrawableChild(ButtonWidget.builder(Text.translatable("screen.playerpingdisplay.reset"), button -> {
+		addRenderableWidget(Button.builder(Component.translatable("screen.playerpingdisplay.reset"), button -> {
 			PlayerPingDisplayConfig.reset();
-			clearAndInit();
-		}).dimensions(centerX - 100, y + 164, 98, 20).build());
+			rebuildWidgets();
+		}).bounds(centerX - 100, y + 164, 98, 20).build());
 
-		addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> close()).dimensions(centerX + 2, y + 164, 98, 20).build());
+		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).bounds(centerX + 2, y + 164, 98, 20).build());
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
-		super.render(context, mouseX, mouseY, deltaTicks);
-		context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, 0xFFFFFF);
-		PlayerPingHud.renderPreview(context, Text.translatable("screen.playerpingdisplay.preview").getString(), width, height);
+	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
+		super.extractRenderState(context, mouseX, mouseY, deltaTicks);
+		context.centeredText(font, title, width / 2, 20, 0xFFFFFFFF);
+		PlayerPingHud.renderPreview(context, Component.translatable("screen.playerpingdisplay.preview").getString(), width, height);
 	}
 
 	@Override
-	public void close() {
+	public void onClose() {
 		PlayerPingDisplayConfig.save();
-		client.setScreen(parent);
+		MinecraftCompat.setScreen(minecraft, parent);
 	}
 
-	private static Text anchorText() {
-		return Text.translatable("screen.playerpingdisplay.anchor", PlayerPingDisplayConfig.anchor.label());
+	private static Component anchorText() {
+		return Component.translatable("screen.playerpingdisplay.anchor", PlayerPingDisplayConfig.anchor.label());
 	}
 
-	private static Text offsetText(boolean xAxis, int value) {
-		return Text.translatable(xAxis ? "screen.playerpingdisplay.x_offset" : "screen.playerpingdisplay.y_offset", value);
+	private static Component offsetText(boolean xAxis, int value) {
+		return Component.translatable(xAxis ? "screen.playerpingdisplay.x_offset" : "screen.playerpingdisplay.y_offset", value);
 	}
 
-	private static Text pingModeText() {
-		return Text.translatable("screen.playerpingdisplay.ping_mode", PlayerPingDisplayConfig.pingMode.label());
+	private static Component pingModeText() {
+		return Component.translatable("screen.playerpingdisplay.ping_mode", PlayerPingDisplayConfig.pingMode.label());
 	}
 
-	private static Text dynamicResolverText() {
-		return Text.translatable("screen.playerpingdisplay.dynamic_resolver", PlayerPingDisplayConfig.dynamicResolverEnabled ? ScreenTexts.ON : ScreenTexts.OFF);
+	private static Component dynamicResolverText() {
+		return Component.translatable("screen.playerpingdisplay.dynamic_resolver", PlayerPingDisplayConfig.dynamicResolverEnabled ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF);
 	}
 
-	private static Text refreshText(int ticks) {
-		return Text.translatable("screen.playerpingdisplay.refresh_interval", String.format("%.1fs", ticks / 20.0F));
+	private static Component refreshText(int ticks) {
+		return Component.translatable("screen.playerpingdisplay.refresh_interval", String.format("%.1fs", ticks / 20.0F));
 	}
 
-	private static final class OffsetSlider extends SliderWidget {
+	private static final class OffsetSlider extends AbstractSliderButton {
 		private static final int MIN = -240;
 		private static final int MAX = 240;
 		private final boolean xAxis;
@@ -123,7 +123,7 @@ public final class PlayerPingDisplayConfigScreen extends Screen {
 		}
 	}
 
-	private static final class RefreshSlider extends SliderWidget {
+	private static final class RefreshSlider extends AbstractSliderButton {
 		private static final int MIN = 10;
 		private static final int MAX = 100;
 
