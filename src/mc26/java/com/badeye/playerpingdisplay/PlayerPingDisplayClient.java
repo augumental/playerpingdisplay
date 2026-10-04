@@ -1,55 +1,54 @@
 package com.badeye.playerpingdisplay;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.resources.Identifier;
 
 public final class PlayerPingDisplayClient implements ClientModInitializer {
 	public static final String MOD_ID = "playerpingdisplay";
 	private static final int DISPLAY_TICKS = 100;
 
-	private static KeyBinding configKey;
+	private static KeyMapping configKey;
 	private static TrackedPlayer trackedPlayer;
 
 	@Override
 	public void onInitializeClient() {
 		PlayerPingDisplayConfig.load();
 
-		configKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+		configKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.playerpingdisplay.open_config",
-				InputUtil.Type.KEYSYM,
-				GLFW.GLFW_KEY_UNKNOWN,
-				KeyBinding.Category.create(Identifier.of(MOD_ID, "controls"))
+				InputConstants.UNKNOWN.getValue(),
+				KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "controls"))
 		));
 
 		ClientTickEvents.END_CLIENT_TICK.register(PlayerPingDisplayClient::onEndTick);
 		AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-			if (world.isClient() && entity instanceof PlayerEntity targetPlayer) {
+			if (world.isClientSide() && entity instanceof Player targetPlayer) {
 				trackedPlayer = new TrackedPlayer(targetPlayer, DISPLAY_TICKS);
 			}
 
-			return ActionResult.PASS;
+			return InteractionResult.PASS;
 		});
-		HudRenderCallback.EVENT.register((drawContext, tickCounter) -> PlayerPingHud.render(drawContext, trackedPlayer));
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "ping"),
+				(graphics, deltaTracker) -> PlayerPingHud.render(graphics, trackedPlayer));
 	}
 
-	public static void showConfigScreen(MinecraftClient client) {
-		client.setScreen(new PlayerPingDisplayConfigScreen(client.currentScreen));
+	public static void showConfigScreen(Minecraft client) {
+		MinecraftCompat.setScreen(client, new PlayerPingDisplayConfigScreen(MinecraftCompat.currentScreen(client)));
 	}
 
-	static int getCurrentPing(PlayerEntity player) {
-		MinecraftClient client = MinecraftClient.getInstance();
-		if (client.getNetworkHandler() == null) {
+	static int getCurrentPing(Player player) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.getConnection() == null) {
 			return -1;
 		}
 
@@ -59,45 +58,45 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 		};
 	}
 
-	private static int getPingByUuidThenName(PlayerEntity player) {
-		MinecraftClient client = MinecraftClient.getInstance();
-		if (client.getNetworkHandler() == null) {
+	private static int getPingByUuidThenName(Player player) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.getConnection() == null) {
 			return -1;
 		}
 
-		var entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
+		var entry = client.getConnection().getPlayerInfo(player.getUUID());
 		return entry == null ? getPingByName(player) : entry.getLatency();
 	}
 
-	private static int getPingByNameThenUuid(PlayerEntity player) {
+	private static int getPingByNameThenUuid(Player player) {
 		int nameMatchedPing = getPingByName(player);
 		if (nameMatchedPing >= 0) {
 			return nameMatchedPing;
 		}
 
-		MinecraftClient client = MinecraftClient.getInstance();
-		if (client.getNetworkHandler() == null) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.getConnection() == null) {
 			return -1;
 		}
 
-		var entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());
+		var entry = client.getConnection().getPlayerInfo(player.getUUID());
 		return entry == null ? -1 : entry.getLatency();
 	}
 
-	private static int getPingByName(PlayerEntity player) {
-		MinecraftClient client = MinecraftClient.getInstance();
-		if (client.getNetworkHandler() == null) {
+	private static int getPingByName(Player player) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.getConnection() == null) {
 			return -1;
 		}
 
 		String profileName = player.getGameProfile().name();
 		String visibleName = player.getName().getString();
-		for (PlayerListEntry playerListEntry : client.getNetworkHandler().getPlayerList()) {
+		for (PlayerInfo playerListEntry : client.getConnection().getOnlinePlayers()) {
 			if (playerListEntry.getProfile().name().equalsIgnoreCase(profileName)) {
 				return playerListEntry.getLatency();
 			}
 
-			if (playerListEntry.getDisplayName() != null && playerListEntry.getDisplayName().getString().equalsIgnoreCase(visibleName)) {
+			if (playerListEntry.getTabListDisplayName() != null && playerListEntry.getTabListDisplayName().getString().equalsIgnoreCase(visibleName)) {
 				return playerListEntry.getLatency();
 			}
 		}
@@ -105,8 +104,8 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 		return -1;
 	}
 
-	private static void onEndTick(MinecraftClient client) {
-		while (configKey.wasPressed()) {
+	private static void onEndTick(Minecraft client) {
+		while (configKey.consumeClick()) {
 			showConfigScreen(client);
 		}
 
@@ -116,12 +115,12 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 	}
 
 	static final class TrackedPlayer {
-		private final PlayerEntity player;
+		private final Player player;
 		private int ticksRemaining;
 		private int ticksUntilPingRefresh;
 		private int cachedPing;
 
-		private TrackedPlayer(PlayerEntity player, int ticksRemaining) {
+		private TrackedPlayer(Player player, int ticksRemaining) {
 			this.player = player;
 			this.ticksRemaining = ticksRemaining;
 			refreshPing();

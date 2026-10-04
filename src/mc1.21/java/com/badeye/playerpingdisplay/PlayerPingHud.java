@@ -4,7 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 
 final class PlayerPingHud {
-	private static final int TEXT_COLOR = 0xFFFFFF;
+	private static final int TEXT_COLOR = 0xFFFFFFFF;
 	private static final int BACKGROUND_COLOR = 0x99000000;
 	private static final int PADDING_X = 6;
 	private static final int PADDING_Y = 4;
