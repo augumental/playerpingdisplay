@@ -19,6 +19,15 @@ allprojects {
         }
         tasks.named('runClient', JavaExec) {
             javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(legacy ? 21 : 25) }
+            doFirst {
+                if (v == '26.3') {
+                    def options = rootProject.file("run/customization-smoke-${v}/options.txt")
+                    options.parentFile.mkdirs()
+                    def lines = options.exists() ? options.readLines().findAll { !it.startsWith('preferredGraphicsBackend:') } : []
+                    lines.add('preferredGraphicsBackend:"opengl"')
+                    options.text = lines.join('\n') + '\n'
+                }
+            }
         }
         loom.runs.client.runDir("run/customization-smoke-${v}")
     }

@@ -96,7 +96,8 @@ bash gradlew clean build -Pminecraft_version=26.3
 Screenshots are saved under `run/customization-smoke-<version>/screenshots/`.
 The smoke harness is included only when that init script is supplied. Always
 clean before packaging after running it. Run versions sequentially in one checkout;
-CI uses isolated workspaces. Production jars exclude the smoke harness.
+CI uses isolated workspaces. The 26.3 smoke profile selects OpenGL for the virtual
+display; production settings are unaffected. Production jars exclude the smoke harness.
 
 ## Gameplay verification
 
