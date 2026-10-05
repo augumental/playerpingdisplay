@@ -3,7 +3,7 @@
 	"id": "playerpingdisplay",
 	"version": "${version}",
 	"name": "Player Ping Display",
-	"description": "Shows a targeted player's live ping for five seconds after you hit them.",
+	"description": "${mod_description}",
 	"authors": [
 		"badeye"
 	],

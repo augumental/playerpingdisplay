@@ -5,6 +5,7 @@ plugins {
 }
 
 def targets = [
+    '1.21.11': [fabric: '0.141.5+1.21.11', modmenu: '17.0.1-beta.1', yarn: '1.21.11+build.6', mod: '1.1.0'],
     '1.21': [fabric: '0.102.0+1.21', modmenu: '11.0.5', yarn: '1.21+build.9'],
     '1.21.1': [fabric: '0.116.17+1.21.1', modmenu: '11.0.5', yarn: '1.21.1+build.3'],
     '1.21.4': [fabric: '0.119.4+1.21.4', modmenu: '13.0.4', yarn: '1.21.4+build.8'],
@@ -22,7 +23,7 @@ def legacy = target.containsKey('yarn')
 def javaVersion = legacy ? 21 : 25
 apply plugin: legacy ? 'fabric-loom' : 'net.fabricmc.fabric-loom'
 
-version = "${project.mod_version}+mc${minecraftVersion}"
+version = "${target.mod ?: project.mod_version}+mc${minecraftVersion}"
 layout.buildDirectory = layout.projectDirectory.dir("build/${minecraftVersion}")
 tasks.named('clean', Delete) {
     setDelete(layout.buildDirectory)
@@ -30,7 +31,7 @@ tasks.named('clean', Delete) {
 group = project.maven_group
 
 // Minecraft moved screen and HUD state into Gui in 26.2.
-sourceSets.main.java.setSrcDirs(legacy
+sourceSets.main.java.setSrcDirs(minecraftVersion == '1.21.11' ? ['src/mc1.21.11/java'] : legacy
         ? ['src/main/java', 'src/mc1.21/java']
         : ['src/main/java', 'src/mc26/java', minecraftVersion == '26.1' ? 'src/mc26.1/java' : 'src/mc26.2/java'])
 
@@ -70,6 +71,9 @@ processResources {
 	inputs.property 'loader_version', project.loader_version
 	inputs.property 'modmenu_version', target.modmenu
 	inputs.property 'java_version', javaVersion
+	inputs.property 'mod_description', minecraftVersion == '1.21.11'
+			? "Shows a targeted player's live ping after you hit them, with a customizable HUD."
+			: "Shows a targeted player's live ping for five seconds after you hit them."
 
 	filesMatching('fabric.mod.json') {
 		expand inputs.properties
