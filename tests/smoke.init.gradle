@@ -1,0 +1,34 @@
+allprojects {
+    afterEvaluate {
+        def v = project.minecraft_version
+        def legacy = v.startsWith('1.')
+        def sources = v == '1.21.11' ? ['1.21.11'] : legacy
+            ? ['mc1.21', v == '1.21.8' ? 'mc1.21.8' : 'mc1.21.early']
+            : ['mc26', v.startsWith('26.1') ? 'mc26.1' : 'mc26.2']
+        sources.each { sourceSets.main.java.srcDir(rootProject.file("tests/${it}/java")) }
+        def menus = ['1.21':'11.0.5','1.21.1':'11.0.5','1.21.4':'13.0.4','1.21.8':'15.0.2','1.21.11':'17.0.1-beta.1','26.1':'18.0.2','26.1.1':'18.0.2','26.1.2':'18.0.2','26.2':'20.0.3','26.3':'21.0.0']
+        dependencies.add(legacy ? 'modRuntimeOnly' : 'runtimeOnly', "maven.modrinth:modmenu:${menus[v]}")
+        tasks.named('processResources') {
+            outputs.upToDateWhen { false }
+            doLast {
+                def file = destinationDir.toPath().resolve('fabric.mod.json').toFile()
+                def json = new groovy.json.JsonSlurper().parse(file)
+                json.entrypoints.client.add('com.badeye.playerpingdisplay.CustomizationSmoke')
+                file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+            }
+        }
+        tasks.named('runClient', JavaExec) {
+            javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(legacy ? 21 : 25) }
+            doFirst {
+                if (v == '26.3') {
+                    def options = rootProject.file("run/customization-smoke-${v}/options.txt")
+                    options.parentFile.mkdirs()
+                    def lines = options.exists() ? options.readLines().findAll { !it.startsWith('preferredGraphicsBackend:') } : []
+                    lines.add('preferredGraphicsBackend:"opengl"')
+                    options.text = lines.join('\n') + '\n'
+                }
+            }
+        }
+        loom.runs.client.runDir("run/customization-smoke-${v}")
+    }
+}

@@ -1,0 +1,20 @@
+allprojects {
+    afterEvaluate {
+        if (project.minecraft_version != '1.21.11') throw new GradleException('This smoke test is for Minecraft 1.21.11.')
+        sourceSets.main.java.srcDir(rootProject.file('tests/1.21.11/java'))
+        dependencies.add('modRuntimeOnly', 'maven.modrinth:modmenu:17.0.1-beta.1')
+        tasks.named('processResources') {
+            outputs.upToDateWhen { false }
+            doLast {
+                def file = destinationDir.toPath().resolve('fabric.mod.json').toFile()
+                def json = new groovy.json.JsonSlurper().parse(file)
+                json.entrypoints.client.add('com.badeye.playerpingdisplay.CustomizationSmoke')
+                file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+            }
+        }
+        tasks.named('runClient', JavaExec) {
+            javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+        }
+        loom.runs.client.runDir('run/customization-smoke')
+    }
+}

@@ -1,11 +1,11 @@
 package com.badeye.playerpingdisplay;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.FontDescription;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.StyleSpriteSource;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import java.util.regex.Pattern;
 
@@ -13,40 +13,40 @@ final class PlayerPingHud {
     private static final Pattern TOKENS = Pattern.compile("%player%|%ping%");
     private PlayerPingHud() {}
 
-    static void render(GuiGraphicsExtractor context, PlayerPingDisplayClient.TrackedPlayer player) {
-        if (player == null || MinecraftCompat.isHudHidden(Minecraft.getInstance())) return;
+    static void render(DrawContext context, PlayerPingDisplayClient.TrackedPlayer player) {
+        if (player == null || MinecraftClient.getInstance().options.hudHidden) return;
         draw(context, player.playerName(), player.pingText(), player.pingColor(), player.opacity(),
-                context.guiWidth(), context.guiHeight());
+                context.getScaledWindowWidth(), context.getScaledWindowHeight());
     }
 
-    static Bounds renderPreview(GuiGraphicsExtractor context, int width, int height) {
+    static Bounds renderPreview(DrawContext context, int width, int height) {
         return draw(context, "Steve", "42", 0x55FF55, 1, width, height);
     }
 
-    static Component formattedText(String player, String ping, int automaticColor) {
-        var font = new FontDescription.Resource(Identifier.fromNamespaceAndPath("minecraft", PlayerPingDisplayConfig.font.resource));
+    static Text formattedText(String player, String ping, int automaticColor) {
+        var font = new StyleSpriteSource.Font(Identifier.of("minecraft", PlayerPingDisplayConfig.font.resource));
         int color = PlayerPingDisplayConfig.automaticPingColor ? automaticColor : PlayerPingDisplayConfig.pingColor;
         String format = PlayerPingDisplayConfig.normalizedFormat(PlayerPingDisplayConfig.displayFormat);
-        MutableComponent text = Component.empty();
+        MutableText text = Text.empty();
         var matcher = TOKENS.matcher(format);
         int end = 0;
         while (matcher.find()) {
-            text.append(Component.literal(format.substring(end, matcher.start())).withStyle(s -> s.withFont(font).withColor(0xFFFFFF)));
+            text.append(Text.literal(format.substring(end, matcher.start())).styled(s -> s.withFont(font).withColor(0xFFFFFF)));
             boolean isPing = matcher.group().equals("%ping%");
-            text.append(Component.literal(isPing ? ping : player).withStyle(s -> s.withFont(font).withColor(isPing ? color : 0xFFFFFF)));
+            text.append(Text.literal(isPing ? ping : player).styled(s -> s.withFont(font).withColor(isPing ? color : 0xFFFFFF)));
             end = matcher.end();
         }
-        return text.append(Component.literal(format.substring(end)).withStyle(s -> s.withFont(font).withColor(0xFFFFFF)));
+        return text.append(Text.literal(format.substring(end)).styled(s -> s.withFont(font).withColor(0xFFFFFF)));
     }
 
     static Bounds previewBounds(int screenWidth, int screenHeight) {
         return bounds(formattedText("Steve", "42", 0x55FF55), screenWidth, screenHeight);
     }
 
-    private static Bounds bounds(Component text, int screenWidth, int screenHeight) {
-        var renderer = Minecraft.getInstance().font;
-        int width = (int) Math.ceil((renderer.width(text) + PlayerPingDisplayConfig.paddingX * 2) * PlayerPingDisplayConfig.hudScale);
-        int height = (int) Math.ceil((renderer.lineHeight + PlayerPingDisplayConfig.paddingY * 2) * PlayerPingDisplayConfig.hudScale);
+    private static Bounds bounds(Text text, int screenWidth, int screenHeight) {
+        var renderer = MinecraftClient.getInstance().textRenderer;
+        int width = (int) Math.ceil((renderer.getWidth(text) + PlayerPingDisplayConfig.paddingX * 2) * PlayerPingDisplayConfig.hudScale);
+        int height = (int) Math.ceil((renderer.fontHeight + PlayerPingDisplayConfig.paddingY * 2) * PlayerPingDisplayConfig.hudScale);
         int availableX = Math.max(0, screenWidth - width), availableY = Math.max(0, screenHeight - height);
         int x = PlayerPingDisplayConfig.hudX == null
                 ? PlayerPingDisplayConfig.anchor.resolveX(screenWidth, width, PlayerPingDisplayConfig.xOffset)
@@ -57,14 +57,14 @@ final class PlayerPingHud {
         return new Bounds(PlayerPingDisplayConfig.clamp(x, 0, availableX), PlayerPingDisplayConfig.clamp(y, 0, availableY), width, height);
     }
 
-    private static Bounds draw(GuiGraphicsExtractor context, String player, String ping, int automaticColor, float opacity, int screenWidth, int screenHeight) {
-        Component text = formattedText(player, ping, automaticColor);
+    private static Bounds draw(DrawContext context, String player, String ping, int automaticColor, float opacity, int screenWidth, int screenHeight) {
+        Text text = formattedText(player, ping, automaticColor);
         Bounds bounds = bounds(text, screenWidth, screenHeight);
-        var renderer = Minecraft.getInstance().font;
-        int width = renderer.width(text) + PlayerPingDisplayConfig.paddingX * 2;
-        int height = renderer.lineHeight + PlayerPingDisplayConfig.paddingY * 2;
+        var renderer = MinecraftClient.getInstance().textRenderer;
+        int width = renderer.getWidth(text) + PlayerPingDisplayConfig.paddingX * 2;
+        int height = renderer.fontHeight + PlayerPingDisplayConfig.paddingY * 2;
         int alpha = Math.round(255 * opacity);
-        var matrices = context.pose();
+        var matrices = context.getMatrices();
         matrices.pushMatrix();
         matrices.translate(bounds.x(), bounds.y());
         matrices.scale((float) PlayerPingDisplayConfig.hudScale, (float) PlayerPingDisplayConfig.hudScale);
@@ -73,13 +73,13 @@ final class PlayerPingHud {
             roundedFill(context, width, height, PlayerPingDisplayConfig.cornerRadius,
                     (backgroundAlpha << 24) | PlayerPingDisplayConfig.backgroundColor);
         }
-        context.text(renderer, text, PlayerPingDisplayConfig.paddingX, PlayerPingDisplayConfig.paddingY,
+        context.drawText(renderer, text, PlayerPingDisplayConfig.paddingX, PlayerPingDisplayConfig.paddingY,
                 (alpha << 24) | 0xFFFFFF, PlayerPingDisplayConfig.textShadow);
         matrices.popMatrix();
         return bounds;
     }
 
-    private static void roundedFill(GuiGraphicsExtractor context, int width, int height, int radius, int color) {
+    private static void roundedFill(DrawContext context, int width, int height, int radius, int color) {
         int r = Math.min(radius, Math.min(width, height) / 2);
         if (r == 0) { context.fill(0, 0, width, height, color); return; }
         for (int y = 0; y < height; y++) {
