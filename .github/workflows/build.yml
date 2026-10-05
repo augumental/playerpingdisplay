@@ -48,6 +48,11 @@ jobs:
             21
             25
       - uses: gradle/actions/setup-gradle@v4
+      - name: Install software OpenGL libraries for SDL
+        if: matrix.minecraft == '26.3'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libegl-dev libegl-mesa0 libgl1-mesa-dri
       - name: Run customization and U shortcut checks
         run: xvfb-run -a bash gradlew -I tests/smoke.init.gradle -Pminecraft_version=${{ matrix.minecraft }} runClient
       - uses: actions/upload-artifact@v4
