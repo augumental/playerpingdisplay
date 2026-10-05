@@ -8,7 +8,7 @@ integration. Existing `config/playerpingdisplay.json` files work unchanged.
 ## Install
 
 Use the jar for your exact Minecraft version in the client's `mods` folder.
-Install Fabric Loader **0.19.5 or newer** and the matching Fabric API.
+For Minecraft **1.21.11**, use Fabric Loader **0.19.3 or newer**. The other builds require **0.19.5 or newer**. Install the matching Fabric API.
 Minecraft **1.21–1.21.11 uses Java 21**; **26.x uses Java 25**.
 Mod Menu is optional; the configuration key can also be assigned in Controls.
 
@@ -28,7 +28,7 @@ archives, not installable mods. This mod is client-only; servers do not need it.
 
 ## Customization — Minecraft 1.21.11
 
-Version **1.1.0** adds a **Customization...** button to the settings GUI:
+Version **1.1.1** adds a **Customization...** button to the settings GUI:
 
 - Fonts: Minecraft, Unicode, and Enchanting (the vanilla enchanting glyphs).
 - Ping color: automatic latency colors, named swatches, or RGB sliders.
@@ -86,7 +86,7 @@ behavior has not been exercised; the original lookup and tracking logic is retai
 The 1.21.11 customization smoke test opens the real client and exercises font
 choices, color controls, every customization setting, formats, drag/clamping,
 window resizing, persistence, legacy migration, reset, and Mod Menu integration.
-With both JDK 21 and JDK 25 installed, run on Linux with Xvfb:
+The 1.21.11 checks run on Fabric Loader 0.19.3. With both JDK 21 and JDK 25 installed, run on Linux with Xvfb:
 
 ```sh
 xvfb-run -a bash gradlew -I tests/1.21.11/smoke.init.gradle -Pminecraft_version=1.21.11 runClient
