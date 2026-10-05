@@ -4,12 +4,10 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.MouseInput;
 import net.minecraft.client.util.ScreenshotRecorder;
 import java.nio.file.Files;
 
@@ -17,7 +15,6 @@ public final class CustomizationSmoke implements ClientModInitializer {
     private int phase, ticks;
     private Screen main;
     private String saved;
-    private static final MouseInput LEFT = new MouseInput(0, 0);
     @Override public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.textRenderer == null || client.currentScreen == null || client.getOverlay() != null) return;
@@ -70,17 +67,17 @@ public final class CustomizationSmoke implements ClientModInitializer {
                     case 8 -> { screenshot(client, "05-background.png"); client.currentScreen.close(); }
                     case 9 -> {
                         var screen = client.currentScreen; var before = PlayerPingHud.previewBounds(screen.width, screen.height);
-                        var click = new Click(before.x() + 3, before.y() + 3, LEFT);
-                        require(screen.mouseClicked(click, false), "HUD hit test");
-                        screen.mouseDragged(new Click(43, 45, LEFT), 43 - click.x(), 45 - click.y());
-                        screen.mouseReleased(new Click(43, 45, LEFT));
+                        var click = new double[] {before.x() + 3, before.y() + 3};
+                        require(screen.mouseClicked(click[0], click[1], 0), "HUD hit test");
+                        screen.mouseDragged(43, 45, 0, 43 - click[0], 45 - click[1]);
+                        screen.mouseReleased(43, 45, 0);
                         var after = PlayerPingHud.previewBounds(screen.width, screen.height);
                         require(Math.abs(after.x() - 40) <= 1 && Math.abs(after.y() - 42) <= 1, "drag keeps grab offset");
                         require(PlayerPingDisplayConfig.hudX != null && PlayerPingDisplayConfig.hudY != null, "dragged position saved");
                         var resized = PlayerPingHud.previewBounds(screen.width + 200, screen.height + 100);
                         require(Math.abs(resized.x() - PlayerPingDisplayConfig.hudX * (screen.width + 200 - resized.width())) <= 1, "position survives GUI resize");
-                        require(screen.mouseClicked(new Click(after.x() + 2, after.y() + 2, LEFT), false), "second drag");
-                        screen.mouseDragged(new Click(-999, -999, LEFT), -999, -999); screen.mouseReleased(new Click(-999, -999, LEFT));
+                        require(screen.mouseClicked(after.x() + 2, after.y() + 2, 0), "second drag");
+                        screen.mouseDragged(-999, -999, 0, -999, -999); screen.mouseReleased(-999, -999, 0);
                         require(PlayerPingHud.previewBounds(screen.width, screen.height).x() == 0 && PlayerPingHud.previewBounds(screen.width, screen.height).y() == 0, "drag clamps to viewport");
                         PlayerPingDisplayConfig.hudX = 0.15; PlayerPingDisplayConfig.hudY = 0.18; PlayerPingDisplayConfig.save();
                         saved = Files.readString(path);
@@ -99,12 +96,12 @@ public final class CustomizationSmoke implements ClientModInitializer {
             } catch (Throwable failure) { failure.printStackTrace(); System.out.println("CUSTOMIZATION_SMOKE_FAILED"); System.exit(1); }
         });
     }
-    private static void press(Screen screen, int index) { ((ButtonWidget) screen.children().get(index)).onPress(LEFT); }
+    private static void press(Screen screen, int index) { ((ButtonWidget) screen.children().get(index)).onPress(); }
     private static void slide(Screen screen, int index, double fraction) {
         var widget = (ClickableWidget) screen.children().get(index);
-        var click = new Click(widget.getX() + 4 + fraction * (widget.getWidth() - 8), widget.getY() + 10, LEFT);
-        require(widget.mouseClicked(click, false), "slider click"); widget.mouseReleased(click);
+        double x = widget.getX() + 4 + fraction * (widget.getWidth() - 8), y = widget.getY() + 10;
+        require(widget.mouseClicked(x, y, 0), "slider click"); widget.mouseReleased(x, y, 0);
     }
-    private static void screenshot(MinecraftClient client, String name) { ScreenshotRecorder.saveScreenshot(client.runDirectory, name, client.getFramebuffer(), 1, text -> {}); }
+    private static void screenshot(MinecraftClient client, String name) { SmokeCompat.screenshot(client, name); }
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
 }

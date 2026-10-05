@@ -15,7 +15,6 @@ import org.lwjgl.glfw.GLFW;
 
 public final class PlayerPingDisplayClient implements ClientModInitializer {
 	public static final String MOD_ID = "playerpingdisplay";
-	private static final int DISPLAY_TICKS = 100;
 
 	private static KeyBinding configKey;
 	private static TrackedPlayer trackedPlayer;
@@ -27,14 +26,14 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 		configKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.playerpingdisplay.open_config",
 				InputUtil.Type.KEYSYM,
-				GLFW.GLFW_KEY_UNKNOWN,
+				GLFW.GLFW_KEY_U,
 				"category.playerpingdisplay"
 		));
 
 		ClientTickEvents.END_CLIENT_TICK.register(PlayerPingDisplayClient::onEndTick);
 		AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
 			if (world.isClient() && entity instanceof PlayerEntity targetPlayer) {
-				trackedPlayer = new TrackedPlayer(targetPlayer, DISPLAY_TICKS);
+				trackedPlayer = new TrackedPlayer(targetPlayer, PlayerPingDisplayConfig.displayTicks());
 			}
 
 			return ActionResult.PASS;
@@ -139,7 +138,7 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 		}
 
 		String pingText() {
-			return cachedPing >= 0 ? cachedPing + " ms" : "unknown";
+			return cachedPing >= 0 ? Integer.toString(cachedPing) : "unknown";
 		}
 
 		int pingColor() {

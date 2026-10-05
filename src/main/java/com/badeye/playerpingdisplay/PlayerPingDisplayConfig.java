@@ -20,6 +20,22 @@ public final class PlayerPingDisplayConfig {
 	public static PingMode pingMode = PingMode.UUID;
 	public static boolean dynamicResolverEnabled = true;
 	public static int refreshTicks = 20;
+	public static final String DEFAULT_FORMAT = "%player% %ping% ms";
+	public static HudFont font = HudFont.DEFAULT;
+	public static boolean automaticPingColor = true;
+	public static int pingColor = 0x55FF55;
+	public static boolean textShadow = true;
+	public static int cornerRadius = 0;
+	public static double displayDuration = 5;
+	public static double hudScale = 1;
+	public static boolean backgroundEnabled = true;
+	public static int backgroundColor = 0;
+	public static int backgroundOpacity = 60;
+	public static int paddingX = 6;
+	public static int paddingY = 4;
+	public static String displayFormat = DEFAULT_FORMAT;
+	public static Double hudX;
+	public static Double hudY;
 
 	private PlayerPingDisplayConfig() {
 	}
@@ -39,6 +55,21 @@ public final class PlayerPingDisplayConfig {
 				pingMode = data.pingMode == null ? migratedPingMode(data.pvphqMode) : data.pingMode;
 				dynamicResolverEnabled = data.dynamicResolverEnabled == null || data.dynamicResolverEnabled;
 				refreshTicks = clamp(data.refreshTicks <= 0 ? 20 : data.refreshTicks, 10, 100);
+				font = data.font == null ? HudFont.DEFAULT : data.font;
+				automaticPingColor = data.automaticPingColor;
+				pingColor = data.pingColor & 0xFFFFFF;
+				textShadow = data.textShadow;
+				cornerRadius = clamp(data.cornerRadius, 0, 12);
+				displayDuration = bounded(data.displayDuration, 1, 30, 5);
+				hudScale = bounded(data.hudScale, 0.5, 3, 1);
+				backgroundEnabled = data.backgroundEnabled;
+				backgroundColor = data.backgroundColor & 0xFFFFFF;
+				backgroundOpacity = clamp(data.backgroundOpacity, 0, 100);
+				paddingX = clamp(data.paddingX, 0, 20);
+				paddingY = clamp(data.paddingY, 0, 16);
+				displayFormat = normalizedFormat(data.displayFormat);
+				hudX = data.hudX == null || !Double.isFinite(data.hudX) ? null : bounded(data.hudX, 0, 1, 0.5);
+				hudY = data.hudY == null || !Double.isFinite(data.hudY) ? null : bounded(data.hudY, 0, 1, 0.5);
 			}
 		} catch (IOException | RuntimeException ignored) {
 			reset();
@@ -49,7 +80,15 @@ public final class PlayerPingDisplayConfig {
 		try {
 			Files.createDirectories(CONFIG_PATH.getParent());
 			try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-				GSON.toJson(new Data(anchor, xOffset, yOffset, pingMode, null, dynamicResolverEnabled, refreshTicks), writer);
+				Data data = new Data();
+				data.anchor = anchor; data.xOffset = xOffset; data.yOffset = yOffset;
+				data.pingMode = pingMode; data.dynamicResolverEnabled = dynamicResolverEnabled; data.refreshTicks = refreshTicks;
+				data.font = font; data.automaticPingColor = automaticPingColor; data.pingColor = pingColor;
+				data.textShadow = textShadow; data.cornerRadius = cornerRadius; data.displayDuration = displayDuration;
+				data.hudScale = hudScale; data.backgroundEnabled = backgroundEnabled; data.backgroundColor = backgroundColor;
+				data.backgroundOpacity = backgroundOpacity; data.paddingX = paddingX; data.paddingY = paddingY;
+				data.displayFormat = normalizedFormat(displayFormat); data.hudX = hudX; data.hudY = hudY;
+				GSON.toJson(data, writer);
 			}
 		} catch (IOException ignored) {
 		}
@@ -62,6 +101,10 @@ public final class PlayerPingDisplayConfig {
 		pingMode = PingMode.UUID;
 		dynamicResolverEnabled = true;
 		refreshTicks = 20;
+		font = HudFont.DEFAULT; automaticPingColor = true; pingColor = 0x55FF55; textShadow = true;
+		cornerRadius = 0; displayDuration = 5; hudScale = 1; backgroundEnabled = true;
+		backgroundColor = 0; backgroundOpacity = 60; paddingX = 6; paddingY = 4;
+		displayFormat = DEFAULT_FORMAT; clearDraggedPosition();
 		save();
 	}
 
@@ -73,7 +116,36 @@ public final class PlayerPingDisplayConfig {
 		return Boolean.TRUE.equals(pvphqMode) ? PingMode.TAB_LIST_PROFILE_DISPLAY : PingMode.UUID;
 	}
 
-	private record Data(Anchor anchor, int xOffset, int yOffset, PingMode pingMode, Boolean pvphqMode, Boolean dynamicResolverEnabled, int refreshTicks) {
+	static double bounded(double value, double min, double max, double fallback) {
+		return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+	}
+
+	static String normalizedFormat(String value) {
+		if (value == null || value.isBlank()) return DEFAULT_FORMAT;
+		return value.substring(0, Math.min(120, value.length())).replace('\n', ' ').replace('\r', ' ');
+	}
+
+	static int displayTicks() { return (int) Math.round(displayDuration * 20); }
+	static void clearDraggedPosition() { hudX = null; hudY = null; }
+
+	private static final class Data {
+		Anchor anchor = Anchor.TOP_CENTER;
+		int xOffset; int yOffset = 48;
+		PingMode pingMode; Boolean pvphqMode; Boolean dynamicResolverEnabled = true; int refreshTicks = 20;
+		HudFont font = HudFont.DEFAULT;
+		boolean automaticPingColor = true; int pingColor = 0x55FF55; boolean textShadow = true;
+		int cornerRadius; double displayDuration = 5; double hudScale = 1;
+		boolean backgroundEnabled = true; int backgroundColor; int backgroundOpacity = 60;
+		int paddingX = 6; int paddingY = 4;
+		String displayFormat = DEFAULT_FORMAT; Double hudX; Double hudY;
+	}
+
+	public enum HudFont {
+		DEFAULT("Minecraft", "default"), UNICODE("Unicode", "uniform"), ENCHANTING("Enchanting", "alt");
+		public final String label;
+		public final String resource;
+		HudFont(String label, String resource) { this.label = label; this.resource = resource; }
+		public HudFont next() { return values()[(ordinal() + 1) % values().length]; }
 	}
 
 	public enum PingMode {

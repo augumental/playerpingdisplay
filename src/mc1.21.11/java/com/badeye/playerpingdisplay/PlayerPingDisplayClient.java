@@ -27,7 +27,7 @@ public final class PlayerPingDisplayClient implements ClientModInitializer {
 		configKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 				"key.playerpingdisplay.open_config",
 				InputUtil.Type.KEYSYM,
-				GLFW.GLFW_KEY_UNKNOWN,
+				GLFW.GLFW_KEY_U,
 				KeyBinding.Category.create(Identifier.of(MOD_ID, "controls"))
 		));
 
