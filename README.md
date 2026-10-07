@@ -1,112 +1,56 @@
-# Player Ping Display — Fabric ports
+# MCPvP Tier Tagger — Fabric 1.21.11
 
-Displays a player's ping after you attack them. Version **1.2.0** brings the
-customizable, draggable HUD and **U** shortcut to all supported Fabric versions.
-Ping lookup modes, live refresh, latency colors and the fade are preserved.
-Existing `config/playerpingdisplay.json` files migrate automatically.
+A client-side MCPvP adaptation of [PvPTiers/Tiers](https://github.com/PvPTiers/Tiers), based on its `1.21.11` branch. This is an independent fork, not an official PvPTiers release.
 
-## Install
+Install `mcpvp-tier-tagger-1.0.0+1.21.11.jar` in your Minecraft 1.21.11 `mods` folder with Fabric Loader **0.19.3 or newer**, Java **21 or newer**, and Fabric API **0.141.6+1.21.11 or newer for 1.21.11**. Mod Menu is optional. This fork retains mod ID `tiers`; replace the original Tiers JAR if it is installed.
 
-Use the jar for your exact Minecraft version in the client's `mods` folder.
-Use Fabric Loader **0.19.3 or newer** and the matching Fabric API.
-Minecraft **1.21–1.21.11 uses Java 21**; **26.x uses Java 25**.
-Press **U** in-game to open the settings GUI. The key can be changed in Controls.
-Existing Minecraft key assignments are preserved; reset the mod's binding in Controls
-if an older installation still has it unbound. Mod Menu is optional.
+## Usage
 
-| Minecraft | Fabric API used for the build | Optional Mod Menu |
-| --- | --- | --- |
-| 1.21 | 0.102.0+1.21 | 11.0.5 |
-| 1.21.1 | 0.116.17+1.21.1 | 11.0.5 |
-| 1.21.4 | 0.119.4+1.21.4 | 13.0.4 |
-| 1.21.8 | 0.136.1+1.21.8 | 15.0.2 |
-| 1.21.11 | 0.141.5+1.21.11 | 17.0.1-beta.1 |
-| 26.1 | 0.145.1+26.1 | 18.0.2 |
-| 26.1.1 | 0.155.3+26.1.2 | 18.0.2 |
-| 26.1.2 | 0.155.3+26.1.2 | 18.0.2 |
-| 26.2 | 0.161.0+26.2 | 20.0.3 |
-| 26.3 | 0.161.0+26.3 | 21.0.0 |
+- `/tiers <username>` opens the upstream Tiers player profile GUI with MCPvP rankings, region, overall position and skin.
+- `/tiers` or `/tiers -config` opens the upstream display configuration GUI.
+- `/tiers -api` opens API settings. It is also accessible through the configuration screen's **API settings** button.
+- `/tiers -clear` clears cached profiles; **Update** reloads a profile and its tier data.
+- Tiers appear beside player names in the world, tab list and chat, using the upstream display toggles. The default selection is Sword, placed on the right; unranked Sword players show their highest available kit through the upstream adaptive mode.
+- The upstream H shortcut opens the nearest player's profile. U and I cycle display kits; Y detects the current kit. Keybindings can be changed in Controls.
+- **Previous kits / Next kits** in the profile GUI show all ranked kits without overflowing the upstream layout. Additional MCPvP kits use short text icons with full-name tooltips.
 
-Install only one Player Ping Display jar. The `-sources.jar` files are source
-archives, not installable mods. This mod is client-only; servers do not need it.
+MCPvP high, middle and low tiers (`HT`, `MT`, `LT`), retired tiers, and peak tiers are preserved. Supported kits include Crystal, Sword, UHC, Pot, Netherite Pot, SMP, Axe, Mace, Shield, Early Game, Late Game, End Game, Spear, Diamond SMP, Cart, Creeper and Bow. Only kits returned by the selected provider are shown. Tier score tooltips are sorting scores inherited from the upstream display, not claimed MCPvP per-kit point awards. Overall points come from the provider.
 
-## Customization — all versions
+## API configuration
 
-Version **1.2.0** adds a **Customization...** button to the settings GUI:
+`config/mcpvp-tier-tagger-api.json` is created automatically:
 
-- Fonts: Minecraft, Unicode, and Enchanting (the vanilla enchanting glyphs).
-- Ping color: automatic latency colors, named swatches, or RGB sliders.
-- Text shadow, rounded corners, display duration (1–30 seconds), and HUD scale (50–300%).
-- Background on/off, RGB color, opacity, and horizontal/vertical padding.
-- Editable format with `%player%` and `%ping%`, plus preset formats such as
-  `%player% - Ping: %ping%` and `%player% - %ping% ms`.
-
-The preview updates immediately. Click and drag the preview in any settings screen
-to move the HUD; its position is saved relative to the window and stays inside the
-screen when resized. Controls hide while dragging so the preview can be placed over
-them. Choose an anchor or change an offset to return to anchor positioning.
-Settings save automatically. Reset restores all defaults, including the position.
-Existing configuration files retain their old settings and receive defaults for the
-new options.
-
-## Build
-
-With JDK 25 installed for Gradle/Loom (the 1.21 jars target Java 21):
-
-```sh
-bash gradlew build -Pminecraft_version=1.21
-bash gradlew build -Pminecraft_version=1.21.1
-bash gradlew build -Pminecraft_version=1.21.4
-bash gradlew build -Pminecraft_version=1.21.8
-bash gradlew build -Pminecraft_version=1.21.11
-bash gradlew build -Pminecraft_version=26.1
-bash gradlew build -Pminecraft_version=26.1.1
-bash gradlew build -Pminecraft_version=26.1.2
-bash gradlew build -Pminecraft_version=26.2
-bash gradlew build -Pminecraft_version=26.3
+```json
+{
+  "primaryUrl": "https://www.mcpvp.com/tiers/data",
+  "backupUrl": "https://mctiers.com/api/profile/{uuid}",
+  "backupEnabled": true,
+  "timeoutSeconds": 8,
+  "cacheMinutes": 10
+}
 ```
 
-Outputs go to `build/<minecraft_version>/libs/`, with the Minecraft version in
-each filename. The default is 26.1. The GitHub Actions workflow builds all ten
-versions and uploads the jars as separate artifacts.
+The primary URL must return the MCPvP leaderboard JSON (`players`, `hasMore`, `nextOffset`). The mod requests pages using `offset`, `limit=100`, and `include_retired=1`, sharing downloaded pages across player lookups. It stops once the requested UUID is found. Searches are asynchronous, with an 8-second request timeout and a 30-second primary lookup budget; the backup is used if enabled and the primary fails or does not contain the player. The backup must return the MCTiers `rankings` profile schema; `{uuid}` is replaced with the undashed UUID. The GUI identifies which provider supplied the results.
 
-Configuration and Mod Menu integration are shared. The four older 1.21 targets use
-Yarn and legacy mouse events, with separate matrix adapters before/after 1.21.8.
-Minecraft 1.21.11 uses newer Yarn font and mouse APIs. The 26.x targets use
-unobfuscated names and Fabric's HUD element registry; small adapters handle the
-screen and HUD state move in 26.2. Minecraft 26.3 uses SDL scancodes for keys,
-so its U shortcut uses Minecraft's key constant rather than GLFW's numeric code.
+Online player UUIDs are taken from the server's player list. Other usernames are resolved with `https://api.mojang.com/users/profiles/minecraft/{name}`. The upstream player skin rendering services remain in use for the existing GUI. API failures produce an error state rather than inventing tiers. Clear the cache or use Update to refresh already displayed profiles. Editing the JSON directly requires a restart; GUI changes apply immediately.
 
-## Validation
+## Build and verification
 
-The client smoke test exercises the default **U** shortcut and opening the GUI
-through its registered key, all font/color/customization controls, editable formats,
-presets, drag hit tests, grab offsets, clamping, resized bounds, persistence,
-legacy config migration, reset, and Mod Menu integration. GitHub Actions builds
-and runs these checks separately for every supported version on Loader 0.19.3.
-Live multiplayer ping still needs a gameplay check.
-
-With JDK 21 and JDK 25 installed, run on Linux with Xvfb (substitute the target version):
+The included Gradle wrapper builds with JDK 25 and produces Java 21 classes for Minecraft 1.21.11:
 
 ```sh
-SDL_VIDEO_FORCE_EGL=1 xvfb-run -a bash gradlew -I tests/smoke.init.gradle -Pminecraft_version=26.3 runClient
-bash gradlew clean build -Pminecraft_version=26.3
+./gradlew clean build
+./gradlew -I tests/api.init.gradle tierApiTests
+./gradlew -I tests/api.init.gradle -PliveApi tierApiTests
+./gradlew -I tests/gui.init.gradle runClient
 ```
 
-Screenshots are saved under `run/customization-smoke-<version>/screenshots/`.
-The smoke harness is included only when that init script is supplied. Always
-clean before packaging after running it. Run versions sequentially in one checkout;
-CI uses isolated workspaces. The 26.3 smoke profile selects OpenGL for the virtual
-display; production settings are unaffected. Production jars exclude the smoke harness.
+The API tests use a local HTTP server and a captured real MCPvP player fixture. They cover pagination, shared concurrent requests, cache hits, fallback on HTTP/malformed responses/missing players, disabled backup, retired and middle tiers, and URL validation. `-PliveApi` additionally checks real Mojang and MCPvP lookups.
 
-## Gameplay verification
+The GUI test requires a graphical display (Xvfb works), Java 21 installed for the test launcher, and checks the actual client command, tier text, extra kit pages, settings navigation, invalid URL rejection and saved backup configuration. It exits automatically after success. Always run `./gradlew clean build` without the GUI test init script before distribution, so the test entrypoint is excluded.
 
-For each version, join a multiplayer server with another player:
+Live MCPvP and Mojang were verified. The workspace could not access the MCTiers backup host, so the backup was verified against the profile schema and local HTTP fixtures, not a live backup response.
 
-- Attack the player and check their name, ping, latency color, configured duration,
-  and fade during the final second. Attack another player to change the target.
-- Check both lookup modes and live refresh enabled/disabled. Missing tab-list
-  entries should show `unknown`; temporary zero values retain the last positive ping.
-- Open settings with U and Mod Menu. Check anchors, offsets,
-  preview, refresh interval, reset, Done, and Escape. Restart to check persistence.
-- Press F1 to hide the HUD. The overlay should disappear with the vanilla HUD.
+## License and attribution
+
+GNU GPL version 3 or later; see [LICENSE](LICENSE), [NOTICE.md](NOTICE.md) and [UPSTREAM_README.md](UPSTREAM_README.md). Original Tiers code and assets are by Flavio6561 and contributors. The complete corresponding source, assets, build wrapper and verification scripts are included in the accompanying source ZIP.
